@@ -415,10 +415,19 @@ fun ContentScope.ExpandedShadeHeader(
     // Scale grows upward from the layout box and does not change the shared element. The corner
     // curve ends at the corner radius, which is also just below the camera cutout. Keep the
     // glyphs on that line. A full status-bar inset is only needed while the privacy chip is showing.
+    // Edge cutouts (e.g. a top-left punch hole) sit right above the clock, so keep the glyphs below
+    // the cutout there instead.
     val clockOverflow =
         with(density) { clockHeightPx.toDp() } * ((ExpandedClockScale - 1f) / 2f)
+    val cutout = LocalDisplayCutout.current()
+    val glyphTop =
+        if (cutout.location == CutoutLocation.LEFT || cutout.location == CutoutLocation.RIGHT) {
+            max(cornerRadius, with(density) { cutout.bottom.toDp() })
+        } else {
+            cornerRadius
+        }
     val topInset =
-        if (viewModel.isPrivacyChipVisible) statusBarHeight else cornerRadius + clockOverflow
+        if (viewModel.isPrivacyChipVisible) statusBarHeight else glyphTop + clockOverflow
 
     Box(
         modifier =
