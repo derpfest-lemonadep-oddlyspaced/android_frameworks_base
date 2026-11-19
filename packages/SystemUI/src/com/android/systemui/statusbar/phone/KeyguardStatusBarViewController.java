@@ -32,6 +32,7 @@ import android.os.UserHandle;
 import android.os.UserManager;
 import android.provider.Settings;
 import android.util.MathUtils;
+import android.util.TypedValue;
 import android.view.DisplayCutout;
 import android.view.View;
 import android.view.ViewGroup;
@@ -171,6 +172,7 @@ public class KeyguardStatusBarViewController extends ViewController<KeyguardStat
                 @Override
                 public void onDensityOrFontScaleChanged() {
                     mView.loadDimens();
+                    updateExtraPadding();
                     // The animator is dependent on resources for offsets
                     mSystemEventAnimator =
                             getSystemEventAnimator(mSystemEventAnimator.isAnimationRunning());
@@ -526,6 +528,17 @@ public class KeyguardStatusBarViewController extends ViewController<KeyguardStat
                 false,
                 mAccentColorSettingObserver,
                 UserHandle.USER_ALL);
+        mContext.getContentResolver().registerContentObserver(
+                Settings.System.getUriFor(Settings.System.STATUSBAR_EXTRA_PADDING_START),
+                false,
+                mExtraPaddingSettingObserver,
+                UserHandle.USER_ALL);
+        mContext.getContentResolver().registerContentObserver(
+                Settings.System.getUriFor(Settings.System.STATUSBAR_EXTRA_PADDING_END),
+                false,
+                mExtraPaddingSettingObserver,
+                UserHandle.USER_ALL);
+        updateExtraPadding();
         updateUserSwitcher();
         onThemeChanged();
         if (!Flags.glanceableHubV2()) {
@@ -592,6 +605,7 @@ public class KeyguardStatusBarViewController extends ViewController<KeyguardStat
         mDisableStateTracker.stopTracking(mCommandQueue);
         mSecureSettings.unregisterContentObserverAsync(mVolumeSettingObserver);
         mContext.getContentResolver().unregisterContentObserver(mAccentColorSettingObserver);
+        mContext.getContentResolver().unregisterContentObserver(mExtraPaddingSettingObserver);
         if (mTintedIconManager != null) {
             mStatusBarIconController.removeIconGroup(mTintedIconManager);
         }
@@ -878,6 +892,26 @@ public class KeyguardStatusBarViewController extends ViewController<KeyguardStat
             onThemeChanged();
         }
     };
+
+    private final ContentObserver mExtraPaddingSettingObserver = new ContentObserver(null) {
+        @Override
+        public void onChange(boolean selfChange) {
+            mMainExecutor.execute(() -> updateExtraPadding());
+        }
+    };
+
+    private void updateExtraPadding() {
+        mView.setExtraPadding(
+                getExtraPaddingPx(Settings.System.STATUSBAR_EXTRA_PADDING_START),
+                getExtraPaddingPx(Settings.System.STATUSBAR_EXTRA_PADDING_END));
+    }
+
+    private int getExtraPaddingPx(String key) {
+        int dp = Settings.System.getIntForUser(
+                mContext.getContentResolver(), key, 0, UserHandle.USER_CURRENT);
+        return (int) TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_DIP, dp, getResources().getDisplayMetrics());
+    }
 
     private StatusBarSystemEventDefaultAnimator getSystemEventAnimator(boolean isAnimationRunning) {
         return new StatusBarSystemEventDefaultAnimator(getResources(), (alpha) -> {

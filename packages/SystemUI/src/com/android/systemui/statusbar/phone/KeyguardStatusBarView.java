@@ -93,6 +93,9 @@ public class KeyguardStatusBarView extends RelativeLayout {
     private boolean mIsPrivacyDotEnabled;
     private int mSystemIconsSwitcherHiddenExpandedMargin;
     private int mStatusBarPaddingEnd;
+    /** User-set extra start/end padding of the status bar contents, in px. May be negative. */
+    private int mExtraPaddingStart;
+    private int mExtraPaddingEnd;
     private int mMinDotWidth;
     private View mSystemIconsContainer;
     private View mSystemIcons;
@@ -203,6 +206,17 @@ public class KeyguardStatusBarView extends RelativeLayout {
         updateKeyguardStatusBarHeight();
     }
 
+    /** Shifts the carrier label and system icons by extra start/end padding, in px. */
+    void setExtraPadding(int startPx, int endPx) {
+        if (mExtraPaddingStart == startPx && mExtraPaddingEnd == endPx) {
+            return;
+        }
+        mExtraPaddingStart = startPx;
+        mExtraPaddingEnd = endPx;
+        updateCarrierLabelMargin();
+        updateSystemIconsLayoutParams();
+    }
+
     public void setUserSwitcherEnabled(boolean enabled) {
         mIsUserSwitcherEnabled = enabled;
     }
@@ -217,7 +231,7 @@ public class KeyguardStatusBarView extends RelativeLayout {
         MarginLayoutParams lp = (MarginLayoutParams) mCarrierLabel.getLayoutParams();
         int marginStart = calculateMargin(
                 getResources().getDimensionPixelSize(R.dimen.keyguard_carrier_text_margin),
-                mPadding.left);
+                mPadding.left) + mExtraPaddingStart;
         lp.setMarginStart(marginStart);
         mCarrierLabel.setLayoutParams(lp);
     }
@@ -277,7 +291,7 @@ public class KeyguardStatusBarView extends RelativeLayout {
         // Use status_bar_padding_end to replace original
         // system_icons_super_container_avatarless_margin_end to prevent different end alignment
         // between PhoneStatusBarView and KeyguardStatusBarView
-        int baseMarginEnd = mStatusBarPaddingEnd;
+        int baseMarginEnd = mStatusBarPaddingEnd + mExtraPaddingEnd;
         int marginEnd =
                 mKeyguardUserSwitcherEnabled ? mSystemIconsSwitcherHiddenExpandedMargin
                         : baseMarginEnd;
