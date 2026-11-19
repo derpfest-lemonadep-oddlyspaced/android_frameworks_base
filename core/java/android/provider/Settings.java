@@ -7036,6 +7036,18 @@ public final class Settings {
         public static final String STATUS_BAR_CLOCK_BOLD = "status_bar_clock_bold";
 
         /**
+         * Extra padding in dp added to the start of the status bar contents. May be negative.
+         * @hide
+         */
+        public static final String STATUSBAR_EXTRA_PADDING_START = "statusbar_extra_padding_start";
+
+        /**
+         * Extra padding in dp added to the end of the status bar contents. May be negative.
+         * @hide
+         */
+        public static final String STATUSBAR_EXTRA_PADDING_END = "statusbar_extra_padding_end";
+
+        /**
          * Status bar clock chip style.
          * 0 - off (default)
          * 1-12 - {@code sb_date_bg1} through {@code sb_date_bg12}

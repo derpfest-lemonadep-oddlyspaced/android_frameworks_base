@@ -21,6 +21,9 @@ import android.database.ContentObserver
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
+import android.os.UserHandle
+import android.provider.Settings
+import android.util.TypedValue
 import android.util.Log
 import android.view.Display.DEFAULT_DISPLAY
 import android.view.GestureDetector
@@ -67,6 +70,12 @@ import kotlin.math.abs
 import lineageos.providers.LineageSettings
 
 private const val TAG = "PhoneStatusBarViewController"
+
+private val EXTRA_PADDING_KEYS =
+    listOf(
+        Settings.System.STATUSBAR_EXTRA_PADDING_START,
+        Settings.System.STATUSBAR_EXTRA_PADDING_END,
+    )
 
 /** Controller for [PhoneStatusBarView]. */
 class PhoneStatusBarViewController
@@ -120,6 +129,13 @@ private constructor(
         object : ContentObserver(Handler(Looper.getMainLooper())) {
             override fun onChange(selfChange: Boolean) {
                 refreshDoubleTapToSleepEnabled()
+            }
+        }
+
+    private val extraPaddingObserver =
+        object : ContentObserver(Handler(Looper.getMainLooper())) {
+            override fun onChange(selfChange: Boolean) {
+                updateExtraPadding()
             }
         }
 
@@ -201,6 +217,7 @@ private constructor(
         object : ConfigurationController.ConfigurationListener {
             override fun onDensityOrFontScaleChanged() {
                 reloadDimens()
+                updateExtraPadding()
             }
 
             override fun onThemeChanged() {
@@ -255,6 +272,15 @@ private constructor(
         } catch (t: RuntimeException) {
             Log.e(TAG, "Failed to set up status bar double-tap to sleep", t)
         }
+        for (key in EXTRA_PADDING_KEYS) {
+            context.contentResolver.registerContentObserver(
+                Settings.System.getUriFor(key),
+                false,
+                extraPaddingObserver,
+                UserHandle.USER_ALL,
+            )
+        }
+        updateExtraPadding()
         progressProvider?.setReadyToHandleTransition(true)
         configurationController.addCallback(configurationListener)
     }
@@ -320,7 +346,26 @@ private constructor(
             context.contentResolver.unregisterContentObserver(doubleTapToSleepObserver)
             doubleTapObserverRegistered = false
         }
+        context.contentResolver.unregisterContentObserver(extraPaddingObserver)
         mView.setDoubleTapTouchListener(null)
+    }
+
+    private fun updateExtraPadding() {
+        mView.setExtraPadding(
+            extraPaddingPx(Settings.System.STATUSBAR_EXTRA_PADDING_START),
+            extraPaddingPx(Settings.System.STATUSBAR_EXTRA_PADDING_END),
+        )
+    }
+
+    private fun extraPaddingPx(key: String): Int {
+        val dp =
+            Settings.System.getIntForUser(context.contentResolver, key, 0, UserHandle.USER_CURRENT)
+        return TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_DIP,
+                dp.toFloat(),
+                resources.displayMetrics,
+            )
+            .toInt()
     }
 
     private fun refreshDoubleTapToSleepEnabled() {

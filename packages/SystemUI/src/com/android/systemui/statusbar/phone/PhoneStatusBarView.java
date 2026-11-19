@@ -87,8 +87,22 @@ public class PhoneStatusBarView extends FrameLayout {
      */
     private int mCutoutSideNudge = 0;
 
+    /** User-set extra start/end padding of the status bar contents, in px. May be negative. */
+    private int mExtraPaddingStart = 0;
+    private int mExtraPaddingEnd = 0;
+
     public PhoneStatusBarView(Context context, AttributeSet attrs) {
         super(context, attrs);
+    }
+
+    /** Shifts the status bar contents by extra start/end padding, in px. */
+    void setExtraPadding(int startPx, int endPx) {
+        if (mExtraPaddingStart == startPx && mExtraPaddingEnd == endPx) {
+            return;
+        }
+        mExtraPaddingStart = startPx;
+        mExtraPaddingEnd = endPx;
+        updatePaddings();
     }
 
     void setLongPressGestureDetector(
@@ -344,12 +358,13 @@ public class PhoneStatusBarView extends FrameLayout {
 
     private void updatePaddings() {
         int statusBarPaddingStart = getResources().getDimensionPixelSize(
-                R.dimen.status_bar_padding_start);
+                R.dimen.status_bar_padding_start) + mExtraPaddingStart;
 
         mStatusBarContents.setPaddingRelative(
                 statusBarPaddingStart,
                 getResources().getDimensionPixelSize(R.dimen.status_bar_padding_top),
-                getResources().getDimensionPixelSize(R.dimen.status_bar_padding_end),
+                getResources().getDimensionPixelSize(R.dimen.status_bar_padding_end)
+                        + mExtraPaddingEnd,
                 0);
 
         findViewById(R.id.notification_lights_out)
