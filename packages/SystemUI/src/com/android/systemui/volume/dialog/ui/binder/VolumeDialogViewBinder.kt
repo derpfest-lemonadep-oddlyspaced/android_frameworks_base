@@ -85,6 +85,9 @@ constructor(
     private val mainSliderVerticalMargin: Int by lazy {
         context.resources.getDimensionPixelSize(R.dimen.volume_dialog_slider_vertical_margin)
     }
+    private val mainSliderVerticalBias: Float by lazy {
+        context.resources.getFloat(R.dimen.volume_dialog_slider_vertical_bias)
+    }
     private val mainSliderHorizontalMargin: Int by lazy {
         context.resources.getDimensionPixelSize(R.dimen.volume_dialog_slider_horizontal_margin)
     }
@@ -165,6 +168,9 @@ constructor(
                             top = getSliderVerticalMargin() - view.paddingTop,
                             bottom = getSliderVerticalMargin() - view.paddingBottom,
                         )
+                        mainSliderContainer?.updateLayoutParams<ConstraintLayout.LayoutParams> {
+                            verticalBias = mainSliderVerticalBias
+                        }
                     } else {
                         mainSliderContainer?.updateMargin(
                             left = getSliderHorizontalMargin() - view.paddingLeft,
