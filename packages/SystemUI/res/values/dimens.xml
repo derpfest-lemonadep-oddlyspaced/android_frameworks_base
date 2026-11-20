@@ -1004,6 +1004,8 @@
     <dimen name="keyguard_translate_distance_on_swipe_up">-180dp</dimen>
 
     <dimen name="keyguard_indication_margin_bottom">32dp</dimen>
+    <!-- Minimum space kept between the keyguard indication and an under-display fingerprint sensor -->
+    <dimen name="keyguard_indication_udfps_gap">16dp</dimen>
     <dimen name="ambient_indication_margin_bottom">71dp</dimen>
 
 

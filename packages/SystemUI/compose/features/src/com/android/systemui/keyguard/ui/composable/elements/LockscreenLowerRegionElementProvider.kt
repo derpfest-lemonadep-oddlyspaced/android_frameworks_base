@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -35,9 +36,19 @@ import com.android.compose.theme.PlatformTheme
 import com.android.systemui.axdynamicbar.ui.AxDynamicBarChipViewModel
 import com.android.systemui.axdynamicbar.ui.compose.AxDynamicBarKeyguardChip
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.unit.IntOffset
+import android.view.Surface
+import com.android.systemui.biometrics.AuthController
+import com.android.systemui.biometrics.domain.interactor.UdfpsOverlayInteractor
 import androidx.compose.ui.res.dimensionResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.android.compose.animation.scene.ElementContentScope
@@ -71,6 +82,8 @@ constructor(
     @Named(LOCKSCREEN_INSTANCE)
     private val quickAffordancesCombinedViewModel: KeyguardQuickAffordancesCombinedViewModel,
     private val axDynamicBarChipViewModel: AxDynamicBarChipViewModel,
+    private val authController: AuthController,
+    private val udfpsOverlayInteractor: UdfpsOverlayInteractor,
 ) : LockscreenElementProvider {
     override val elements: List<LockscreenElement> by lazy { listOf(LowerRegionElement()) }
 
@@ -88,9 +101,36 @@ constructor(
             ) {
                 ShortcutElement(Shortcuts.Start, viewModel)
 
+                // On devices with a low under-display fingerprint sensor there is not enough room
+                // below the sensor for the indication text, so lift it above the sensor instead.
+                val udfpsParams by
+                    udfpsOverlayInteractor.udfpsOverlayParams.collectAsStateWithLifecycle()
+                val udfpsTop =
+                    udfpsParams.sensorBounds
+                        .takeIf {
+                            authController.isUdfpsSupported &&
+                                !it.isEmpty &&
+                                udfpsParams.rotation == Surface.ROTATION_0
+                        }
+                        ?.top
+                val udfpsGapDp = dimensionResource(R.dimen.keyguard_indication_udfps_gap)
+                val udfpsGap = with(LocalDensity.current) { udfpsGapDp.roundToPx() }
+                var indicationLift by remember { mutableIntStateOf(0) }
                 Box(
                     Modifier.weight(1f)
-                        .wrapContentHeight(Alignment.CenterVertically, unbounded = true),
+                        .wrapContentHeight(Alignment.CenterVertically, unbounded = true)
+                        .onGloballyPositioned { coordinates ->
+                            indicationLift =
+                                if (udfpsTop == null) {
+                                    0
+                                } else {
+                                    val bottom =
+                                        coordinates.positionInWindow().y.toInt() +
+                                            coordinates.size.height
+                                    (bottom - (udfpsTop - udfpsGap)).coerceAtLeast(0)
+                                }
+                        }
+                        .offset { IntOffset(0, -indicationLift) },
                     contentAlignment = Alignment.Center,
                 ) {
                     LockscreenElement(IndicationArea)
