@@ -36,6 +36,7 @@ import android.media.audiopolicy.AudioProductStrategy;
 import android.os.Build;
 import android.os.IBinder;
 import android.os.Parcel;
+import android.os.SystemProperties;
 import android.os.Vibrator;
 import android.ravenwood.annotation.RavenwoodKeepPartialClass;
 import android.ravenwood.annotation.RavenwoodKeepStaticInitializer;
@@ -2909,6 +2910,15 @@ public class AudioSystem
         boolean forceSingleVolume = context.getResources().getBoolean(
                 com.android.internal.R.bool.config_single_volume);
         return getPlatformType(context) == PLATFORM_TELEVISION || forceSingleVolume;
+    }
+
+    /**
+     * @hide
+     * @return whether a hardware alert slider sets the ringer mode, so that volume changes
+     *         and the volume dialog must not change it.
+     */
+    public static boolean hasAlertSlider() {
+        return SystemProperties.getBoolean("ro.derpfest.has_alert_slider", false);
     }
 
     /**

@@ -436,6 +436,8 @@ public class AudioService extends IAudioService.Stub
 
     // indicates whether the system maps all streams to a single stream.
     private final boolean mIsSingleVolume;
+    // The ringer mode is set by a hardware alert slider and not by volume changes
+    private final boolean mHasAlertSlider = AudioSystem.hasAlertSlider();
 
     /**
      * indicates whether STREAM_NOTIFICATION is aliased to STREAM_RING
@@ -4813,7 +4815,7 @@ public class AudioService extends IAudioService.Stub
 
     private int getNewRingerMode(int stream, int index, int flags) {
         // setRingerMode does nothing if the device is single volume,so the value would be unchanged
-        if (mIsSingleVolume) {
+        if (mIsSingleVolume || mHasAlertSlider) {
             return getRingerModeExternal();
         }
 
@@ -4879,8 +4881,18 @@ public class AudioService extends IAudioService.Stub
         // setting volume on ui sounds stream type also controls silent mode
         if (((flags & AudioManager.FLAG_ALLOW_RINGER_MODES) != 0) ||
                 (stream == getUiSoundsStreamType())) {
-            setRingerMode(getNewRingerMode(stream, index, flags),
-                    TAG + ".onSetStreamVolume", false /*external*/);
+            if (mHasAlertSlider) {
+                // The slider owns the ringer mode: keep it muted while the slider mutes it,
+                // and otherwise keep the ringer audible instead of entering vibrate.
+                if (getRingerModeInternal() != AudioManager.RINGER_MODE_NORMAL) {
+                    return;
+                }
+                index = Math.max(index, (int) (10 * getVssForStreamOrDefault(stream)
+                        .getIndexStepFactor()));
+            } else {
+                setRingerMode(getNewRingerMode(stream, index, flags),
+                        TAG + ".onSetStreamVolume", false /*external*/);
+            }
         }
         setStreamVolumeInt(stream, index, device, false, caller, hasModifyAudioSettings);
         // setting volume from Hdmi-CEC system audio, skip unmuting the stream being modified and
@@ -8490,6 +8502,19 @@ public class AudioService extends IAudioService.Stub
         }
 
         int ringerMode = getRingerModeInternal();
+
+        if (mHasAlertSlider) {
+            // Never leave the ringer mode chosen by the slider. While it mutes the ringer the
+            // volume stays put, otherwise it can be lowered down to the last audible step.
+            final boolean isMute = direction == AudioManager.ADJUST_MUTE
+                    || direction == AudioManager.ADJUST_TOGGLE_MUTE;
+            if (ringerMode != RINGER_MODE_NORMAL || isMute
+                    || (direction == AudioManager.ADJUST_LOWER && oldIndex < 2 * step)) {
+                result &= ~FLAG_ADJUST_VOLUME;
+            }
+            mPrevVolDirection = direction;
+            return result;
+        }
 
         switch (ringerMode) {
         case RINGER_MODE_NORMAL:

@@ -22,6 +22,7 @@ import android.media.AudioManager.RINGER_MODE_NORMAL
 import android.media.AudioManager.RINGER_MODE_SILENT
 import android.media.AudioManager.RINGER_MODE_VIBRATE
 import android.media.AudioManager.STREAM_RING
+import android.media.AudioSystem
 import android.os.VibrationEffect
 import android.widget.Toast
 import com.android.internal.R as internalR
@@ -86,6 +87,9 @@ constructor(
 
     // Show blur if the flag is enabled and the volume dialog is vertical
     val showBlur = isVolumeAndPowerBlurEnabled() && isVolumeDialogVertical
+
+    // A hardware alert slider sets the ringer mode, so there is nothing to pick here
+    private val hasAlertSlider = AudioSystem.hasAlertSlider()
 
     private val drawerState = MutableStateFlow<RingerDrawerState>(RingerDrawerState.Initial)
     private val orientation: StateFlow<Int> =
@@ -190,7 +194,7 @@ constructor(
         if (currentIndex == -1) {
             volumeDialogLogger.onCurrentRingerModeIsUnsupported(currentRingerMode)
         }
-        return if (currentIndex == -1 || isSingleVolume) {
+        return if (currentIndex == -1 || isSingleVolume || hasAlertSlider) {
             RingerViewModelState.Unavailable
         } else {
             toButtonViewModel(currentRingerMode, isZenMuted, isSelectedButton = true)?.let {
