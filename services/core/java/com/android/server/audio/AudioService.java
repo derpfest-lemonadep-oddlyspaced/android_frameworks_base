@@ -1688,6 +1688,14 @@ public class AudioService extends IAudioService.Stub
                 Log.e(TAG, "Error querying for alarm min volume ", e);
             }
         }
+
+        if (mHasAlertSlider) {
+            // Only the slider silences the ringer, so no slider can take it down to 0.
+            MIN_STREAM_VOLUME[AudioSystem.STREAM_RING] =
+                    Math.max(MIN_STREAM_VOLUME[AudioSystem.STREAM_RING], 1);
+            MIN_STREAM_VOLUME[AudioSystem.STREAM_NOTIFICATION] =
+                    Math.max(MIN_STREAM_VOLUME[AudioSystem.STREAM_NOTIFICATION], 1);
+        }
         int defaultAlarmVolume = SystemProperties.getInt("ro.config.alarm_vol_default", -1);
         if (defaultAlarmVolume != -1 &&
                 defaultAlarmVolume <= MAX_STREAM_VOLUME[AudioSystem.STREAM_ALARM]) {
