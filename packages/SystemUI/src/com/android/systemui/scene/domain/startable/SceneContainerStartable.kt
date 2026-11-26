@@ -36,6 +36,7 @@ import com.android.systemui.authentication.shared.model.AuthenticationMethodMode
 import com.android.systemui.bouncer.domain.interactor.AlternateBouncerInteractor
 import com.android.systemui.bouncer.domain.interactor.BouncerInteractor
 import com.android.systemui.bouncer.domain.interactor.SimBouncerInteractor
+import com.android.systemui.camera.CameraGestureHelper
 import com.android.systemui.classifier.FalsingCollector
 import com.android.systemui.classifier.FalsingCollectorActual
 import com.android.systemui.common.domain.interactor.SysUIStateDisplaysInteractor
@@ -140,6 +141,7 @@ constructor(
     private val authenticationInteractor: Lazy<AuthenticationInteractor>,
     private val bootInteractor: OnBootTransitionInteractor,
     private val bouncerInteractor: BouncerInteractor,
+    private val cameraGestureHelper: Lazy<CameraGestureHelper>,
     private val centralSurfacesOptLazy: Lazy<Optional<CentralSurfaces>>,
     private val deviceEntryHapticsInteractor: DeviceEntryHapticsInteractor,
     private val deviceEntryInteractor: DeviceEntryInteractor,
@@ -458,7 +460,12 @@ constructor(
                         instantlySnapScenes = true,
                         forDoubleTapPowerGesture = true,
                     )
-                } else if (it == PowerButtonLaunchEvent.LAUNCH_FROM_NOT_ENTERED) {
+                } else if (
+                    it == PowerButtonLaunchEvent.LAUNCH_FROM_NOT_ENTERED &&
+                        // Without a secure camera to occlude the keyguard, the launch goes through
+                        // the bouncer, and unlocking from Occluded would never reach Gone.
+                        cameraGestureHelper.get().willLaunchOverKeyguard()
+                ) {
                     switchToScene(
                         Scenes.Occluded,
                         "double tap power while not entered when going to sleep",

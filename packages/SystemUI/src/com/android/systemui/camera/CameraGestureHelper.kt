@@ -102,16 +102,11 @@ constructor(
     fun launchCamera(source: Int) {
         val intent: Intent = getStartCameraIntent()
         intent.putExtra(CameraIntents.EXTRA_LAUNCH_SOURCE, source)
-        val wouldLaunchResolverActivity =
-            activityIntentHelper.wouldLaunchResolverActivity(
-                intent,
-                selectedUserInteractor.getSelectedUserId(),
-            )
 
         if (com.android.internal.camera.flags.Flags.cameraWarmUp()) {
             cameraNotifyWarmUpInteractor.notifyCameraWarmUp()
         }
-        if (CameraIntents.isSecureCameraIntent(intent) && !wouldLaunchResolverActivity) {
+        if (willLaunchOverKeyguard(intent)) {
             uiExecutor.execute {
                 // Normally an activity will set its requested rotation animation on its window.
                 // However when launching an activity causes the orientation to change this is too
@@ -153,6 +148,20 @@ constructor(
         // Call this to make sure the keyguard is ready to be dismissed once the next intent is
         // handled by the OS (in our case it is the activity we started right above)
         statusBarKeyguardViewManager.readyForKeyguardDone()
+    }
+
+    /**
+     * Whether the camera launch will start a secure camera activity over the keyguard. This is
+     * false when the device can be entered, and when more than one app handles the secure camera
+     * intent without a default, since the resolver can only be shown after the keyguard is gone.
+     */
+    @JvmOverloads
+    fun willLaunchOverKeyguard(intent: Intent = getStartCameraIntent()): Boolean {
+        return CameraIntents.isSecureCameraIntent(intent) &&
+            !activityIntentHelper.wouldLaunchResolverActivity(
+                intent,
+                selectedUserInteractor.getSelectedUserId(),
+            )
     }
 
     /**
