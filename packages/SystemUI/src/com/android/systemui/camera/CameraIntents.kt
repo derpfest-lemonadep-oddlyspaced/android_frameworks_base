@@ -56,8 +56,37 @@ class CameraIntents {
         @JvmStatic
         fun getSecureCameraIntent(context: Context, userId: Int): Intent {
             val intent = Intent(DEFAULT_SECURE_CAMERA_INTENT_ACTION)
-            getOverrideCameraPackage(context, userId)?.let { intent.setPackage(it) }
+            (getOverrideCameraPackage(context, userId)
+                    ?: getDefaultSecureCameraPackage(context, userId))?.let { intent.setPackage(it) }
             return intent.addFlags(Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS)
+        }
+
+        /**
+         * Returns the package of the user's default camera when several apps handle the secure
+         * camera intent and none is the default for it. Users can only pick a default for the
+         * insecure intent, so without this the secure intent would always need the resolver.
+         */
+        private fun getDefaultSecureCameraPackage(context: Context, userId: Int): String? {
+            val pm = context.packageManager
+            val secureIntent = Intent(DEFAULT_SECURE_CAMERA_INTENT_ACTION)
+            val securePackages =
+                pm.queryIntentActivitiesAsUser(secureIntent, PackageManager.MATCH_DEFAULT_ONLY, userId)
+                    .map { it.activityInfo.packageName }
+                    .distinct()
+            if (securePackages.size < 2) {
+                return null
+            }
+            val secureDefault =
+                pm.resolveActivityAsUser(secureIntent, PackageManager.MATCH_DEFAULT_ONLY, userId)
+                    ?.activityInfo?.packageName
+            if (secureDefault in securePackages) {
+                return null
+            }
+            return pm.resolveActivityAsUser(
+                    Intent(DEFAULT_INSECURE_CAMERA_INTENT_ACTION),
+                    PackageManager.MATCH_DEFAULT_ONLY,
+                    userId,
+                )?.activityInfo?.packageName?.takeIf { it in securePackages }
         }
 
         @JvmStatic
